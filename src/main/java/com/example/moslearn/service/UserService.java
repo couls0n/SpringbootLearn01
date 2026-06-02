@@ -30,14 +30,14 @@ public class UserService {
 
     public User create(CreateUserRequest request) {
         Long id = idGenerator.incrementAndGet();
-        User user = new User(id, request.getName(), request.getEmail());
+        User user = new User(id, request.name(), request.email());
         users.put(id, user);
         return user;
     }
 
     public User update(Long id, UpdateUserRequest request) {
         requireUser(id);
-        User updatedUser = new User(id, request.getName(), request.getEmail());
+        User updatedUser = new User(id, request.name(), request.email());
         users.put(id, updatedUser);
         return updatedUser;
     }
