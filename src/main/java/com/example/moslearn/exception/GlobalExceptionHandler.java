@@ -19,6 +19,12 @@ public class GlobalExceptionHandler {
                 .body(new ApiErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateEmail(DuplicateEmailException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiErrorResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationError(MethodArgumentNotValidException ex) {
         Map<String, String> errors = ex.getBindingResult()
@@ -33,5 +39,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest()
                 .body(new ApiErrorResponse("Validation failed", errors));
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderNotFound(OrderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiErrorResponse(ex.getMessage()));
+
+    }
+    @ExceptionHandler(OrderProcessingException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(OrderProcessingException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiErrorResponse(ex.getMessage()));
     }
 }

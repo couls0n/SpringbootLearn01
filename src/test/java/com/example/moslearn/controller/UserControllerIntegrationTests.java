@@ -3,7 +3,9 @@ package com.example.moslearn.controller;
 import com.example.moslearn.dto.CreateUserRequest;
 import com.example.moslearn.dto.UpdateUserRequest;
 import com.example.moslearn.model.User;
+import com.example.moslearn.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,6 +31,14 @@ class UserControllerIntegrationTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+    }
 
     @Test
     void helloEndpointReturnsJsonMessage() throws Exception {
@@ -87,5 +97,21 @@ class UserControllerIntegrationTests {
                 .andReturn();
 
         assertThat(result.getResponse().getContentAsString()).contains("Validation failed");
+    }
+
+    @Test
+    void duplicateEmailReturnsConflict() throws Exception {
+        CreateUserRequest request = new CreateUserRequest("Alice", "alice@example.com");
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("User with email alice@example.com already exists."));
     }
 }

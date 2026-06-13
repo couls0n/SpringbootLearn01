@@ -1,8 +1,11 @@
 package com.example.moslearn.controller;
 
 import com.example.moslearn.dto.CreateUserRequest;
+import com.example.moslearn.dto.OrderResponse;
 import com.example.moslearn.dto.UpdateUserRequest;
+import com.example.moslearn.model.Order;
 import com.example.moslearn.model.User;
+import com.example.moslearn.service.OrderService;
 import com.example.moslearn.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -22,9 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final OrderService orderService;
 
-    public UserController(UserService userService) {
+
+    public UserController(UserService userService,OrderService orderService) {
         this.userService = userService;
+        this.orderService = orderService;
     }
 
     @GetMapping
@@ -52,5 +58,11 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable("id") Long id) {
         userService.delete(id);
+    }
+
+    @GetMapping("/{id}/orders")
+    public List<OrderResponse> getUserOrdersByUserId(@PathVariable Long id) {
+        List<OrderResponse> orders = orderService.findUserOrders(id);
+        return orders;
     }
 }

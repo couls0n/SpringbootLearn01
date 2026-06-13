@@ -2,56 +2,74 @@ package com.example.moslearn.service;
 
 import com.example.moslearn.dto.CreateUserRequest;
 import com.example.moslearn.dto.UpdateUserRequest;
+import com.example.moslearn.exception.DuplicateEmailException;
 import com.example.moslearn.exception.UserNotFoundException;
+import com.example.moslearn.model.Order;
 import com.example.moslearn.model.User;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+
+import com.example.moslearn.repository.OrderRepository;
+import com.example.moslearn.repository.UserRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class UserService {
 
-    private final Map<Long, User> users = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong();
+    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
-    public List<User> findAll() {
-        return users.values()
-                .stream()
-                .sorted(Comparator.comparing(User::getId))
-                .toList();
+    public UserService(UserRepository userRepository, OrderRepository orderRepository) {
+        this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
     }
 
+    @Transactional(readOnly = true)
+    public List<User> findAll() {
+        return userRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+    }
+
+    @Transactional(readOnly = true)
     public User findById(Long id) {
         return requireUser(id);
     }
 
     public User create(CreateUserRequest request) {
-        Long id = idGenerator.incrementAndGet();
-        User user = new User(id, request.name(), request.email());
-        users.put(id, user);
-        return user;
+        ensureEmailAvailable(request.email(), null);
+        User user = new User(null, request.name(), request.email());
+        return userRepository.save(user);
     }
 
     public User update(Long id, UpdateUserRequest request) {
-        requireUser(id);
-        User updatedUser = new User(id, request.name(), request.email());
-        users.put(id, updatedUser);
-        return updatedUser;
+        User user = requireUser(id);
+        ensureEmailAvailable(request.email(), id);
+        user.setName(request.name());
+        user.setEmail(request.email());
+        return userRepository.save(user);
     }
 
     public void delete(Long id) {
-        requireUser(id);
-        users.remove(id);
+        userRepository.delete(requireUser(id));
     }
 
+    @Transactional(readOnly = true)
     private User requireUser(Long id) {
-        User user = users.get(id);
-        if (user == null) {
-            throw new UserNotFoundException(id);
-        }
-        return user;
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
+
+    @Transactional(readOnly = true)
+    private void ensureEmailAvailable(String email, Long currentUserId) {
+        userRepository.findByEmail(email)
+                .ifPresent(existingUser -> {
+                    boolean sameUser = currentUserId != null && currentUserId.equals(existingUser.getId());
+                    if (!sameUser) {
+                        throw new DuplicateEmailException(email);
+                    }
+                });
+    }
+
+
 }
